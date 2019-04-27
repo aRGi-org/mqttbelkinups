@@ -28,28 +28,46 @@ UPSQTT.CONF
 this is the configuration files, it uses an ini like structure:
 
 [upsqtt]
+
 name=belkinups   <------ 
 
 [server]
 
 address = 10.11.12.13  <---- address of the machine running bulldog
+
 port = 6969            <---- bulldog webserver port
+
 user = admin           <---- bulldog webserver auth user
+
 secret = palabrasegreta <--- bulldog webserver password
 
+
 [broker]
+
 address = broker.example.com   <------ broker address
+
 port = 1833                    <------ broker port
+
 user = mqttUser                <------ broker user
+
 secret = palabrasegreta2       <------ broker password
+
 bridge = yourbridge            <------ openhab2 bridge name (see notes)
+
 keepalive = 30000              <------ broker configuration parameters
-reconnect = 60000       
+
+reconnect = 60000    
+
 qos = 0
+
 secure = false
+
 retain = false
+
 clientID = mqttUPSClient
+
 root_topic = F6C800xxUNV      <------- root topic to publish, all the topics published will start with i.e. F6C800xxUNV/status
+
 
 notes: if you already have an mqtt broker bridge defined in openhab please do use -b option and fill broker parameters with the same parameters used in the things file you already have. in other words use -b option only if this is the first mqtt bridge you are defining in openhab2
 
