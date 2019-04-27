@@ -31,6 +31,7 @@ this is the configuration files, it uses an ini like structure:
 name=belkinups   <------ 
 
 [server]
+
 address = 10.11.12.13  <---- address of the machine running bulldog
 port = 6969            <---- bulldog webserver port
 user = admin           <---- bulldog webserver auth user
