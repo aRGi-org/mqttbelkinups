@@ -23,7 +23,6 @@ from bs4 import BeautifulSoup
 import argparse
 import time
 
-# query bulldog webserver 
 def queryUPS():
         # get state data and parse them to a dict
         kl=[]
@@ -80,7 +79,6 @@ def queryUPS():
                         upsdata.append([i[k].text.strip().replace(" ","").lower(),"1" if j[k]['src'] == "AlarmOn.jpg" else "0", 'contact', i[k].text.strip()])
 
 
-# create openhab files 
 def openHabFiles(topics): 
     broker = "Bridge mqtt:broker:" + config['broker']['bridge'] + ' "MQTT broker bridge:' + config['broker']['bridge'] + '" @ "Home" [\n'
     broker += '\thost="' + config['broker']['address'] + '",\n'
@@ -94,23 +92,21 @@ def openHabFiles(topics):
     broker += '\tpassword="' + config['broker']['secret'] + '"\n\t]\n'
     things = "\n\tThing mqtt:topic:" + config['broker']['bridge'] + ":" + config['broker']['root_topic'] + ' "Belkin UPS" (mqtt:broker:' + config['broker']['bridge'] + ') @ "Home" {\n\t\tChannels:\n'
     for k in range(0,len(topics)): 
+        #print(topic + "/" + upsdata[k][0]," ", upsdata[k][1])	
         things += "\t\t\tType " + topics[k][2] + ":" + topics[k][0].replace("-","") + ' "' +	topics[k][3].replace("-"," ")	+ '" [ stateTopic="' + topic + "/" + topics[k][0] + '" ]\n'
     things += "\t}\n"
 
     items = ''
     id = 0
     for k in range(0,len(topics)): 
-        if topics[k][2].lower() == 'contact':
-            items += topics[k][2].capitalize() + " UPS_" + topics[k][0].replace("-","") + ' "' + topics[k][3] + ' [MAP(alarm.map):%s]" <upsalarm> { channel="mqtt:topic:' + config['broker']['bridge'] + ':' + config['broker']['root_topic'] + ':' + topics[k][0] + '" }\n'
-        else:		
-            items += topics[k][2].capitalize() + " UPS_" + topics[k][0].replace("-","") + ' "' + topics[k][3] + ' [%s]" <poweroutlet> { channel="mqtt:topic:' + config['broker']['bridge'] + ':' + config['broker']['root_topic'] + ':' + topics[k][0] + '" }\n'
+        items += topics[k][2].capitalize() + " UPS_" + topics[k][0].replace("-","") + ' "UPS' + str(id) + '" { channel="mqtt:topic:' + config['broker']['bridge'] + ':' + config['broker']['root_topic'] + ':' + topics[k][0] + '" }\n'
         id += 1	   
 
     maps = 'sitemap ups label="UPS" {\n\tFrame label="' + config['broker']['root_topic'] + '" icon="poweroutlet_eu" {\n'
     for k in range(0,len(topics)): 
         maps += '\t\t'
-        maps +=  "Text"
-        maps += " item=UPS_" + topics[k][0].replace("-","") + '\n'
+        maps +=  "Switch" if topics[k][2] == "contact" else "Text"
+        maps += " item=UPS_" + topics[k][0].replace("-","") + ' label="' + topics[k][3].replace("-"," ") + '"\n'
     maps += "\t}\n"
     maps += "}"
 
@@ -129,7 +125,7 @@ def openHabFiles(topics):
     except:
         print("Error Creating openhab configuration files.",sys.exc_info())
 	
-# main loop
+	
 try:
     parser = argparse.ArgumentParser(description='Belkin UPS data to MQTT topics')
     parser.add_argument('-f', action="store_true", default=False, dest="openhabfiles")
@@ -146,6 +142,7 @@ else:
         top_level_url = "http://" + config['server']['address'] + ":" + config['server']['port'] + "/"
         topic = config['upsqtt']['name']
         auth = {'username':config['broker']['user'], 'password':config['broker']['secret']}
+        clientId = config['broker']['clientID']
         # create a password manager
         password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
 
@@ -162,8 +159,15 @@ else:
             openHabFiles(upsdata)
         else:
             while True:
+                messages = []
                 for k in range(0,len(upsdata)): 
-                    publish.single(topic + "/" + upsdata[k][0], upsdata[k][1], auth=auth, hostname=config['broker']['address'])
+                    onetopic = {
+						'topic' : topic + "/" + upsdata[k][0],
+						'payload' : upsdata[k][1]
+					}
+                    messages.append(onetopic)
+                publish.multiple(messages, auth=auth, hostname=config['broker']['address'], client_id=clientId)
+				# publish.single(topic + "/" + upsdata[k][0], upsdata[k][1], auth=auth, hostname=config['broker']['address'])
                 time.sleep(15)
                 upsdata = []
                 queryUPS()
